@@ -1,6 +1,7 @@
 # clef-project-template
 
-This is a template repository for CLEF projects. It is meant to be forked and used as a starting point for new projects.
+https://www.joker-project.com/clef-2025/
+https://clef2025.clef-initiative.eu/index.php?page=Pages/Labs/JOKER.html
 
 ## TODOS
 
