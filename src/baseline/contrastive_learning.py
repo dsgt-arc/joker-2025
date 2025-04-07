@@ -49,12 +49,14 @@ def combine_files():
 def format_dataset(df):
   puns = df[['id_en', 'row', 'text_clean']]
   puns = puns.assign(target=1)
-  puns = puns.assign(is_pun=1)
+  # puns = puns.assign(is_pun=1)
   non_puns = df[['id_en', 'row']]
   non_puns['text_clean'] = df['non_pun']
   non_puns = non_puns.assign(target=0)
-  non_puns['is_pun'] = df['is_pun']
-  return pd.concat([puns, non_puns])
+  # non_puns['is_pun'] = df['is_pun']
+  concatenated = pd.concat([puns, non_puns])
+  sorted = concatenated.sort_values(by=['row', 'target'])
+  return sorted
 
 
 def indentify_puns(df):
@@ -71,6 +73,15 @@ def indentify_puns(df):
   return df
 
 
+def identify_is_pun_true(df):
+  return df[(df['target'] == 0) & (df['is_pun'] == 1)]
+
+
+def get_average_lengths(df):
+  df['avg_length'] = df['text_clean'].str.len()
+  return df.groupby('target')['avg_length'].mean()
+
+
 if __name__ == "__main__":
   # text_fr_df = load(cleaned_fr_path) #.head(5)
   # create_non_puns(text_fr_df)
@@ -78,3 +89,5 @@ if __name__ == "__main__":
   contrastive_df = format_dataset(contrastive_df)
   save(contrastive_df, contrastive_path)
   print(contrastive_df)
+  print(get_average_lengths(contrastive_df))
+  # print('count', identify_is_pun_true(contrastive_df))
