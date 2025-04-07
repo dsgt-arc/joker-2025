@@ -63,3 +63,6 @@ The `notebooks` directory should contain Jupyter notebooks that capture explorat
 The `user` directory is a scratch directory where users can commit files without worrying about polluting the main repository.
 The `scripts` directory should contain scripts that are used in the project, such as utility scripts for working with PACE or GCP.
 The `docs` directory should contain documentation for the project, including explanations of the code, the data, and the models.
+
+`brew install python3`
+`python3 -m pip install langchain langchain_openai langchain_anthropic jsonextractor sacrebleu bert-score pydantic`
