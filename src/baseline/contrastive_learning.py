@@ -49,12 +49,14 @@ def combine_files():
 def format_dataset(df):
   puns = df[['id_en', 'row', 'text_clean']]
   puns = puns.assign(target=1)
-  puns = puns.assign(is_pun=1)
+  # puns = puns.assign(is_pun=1)
   non_puns = df[['id_en', 'row']]
   non_puns['text_clean'] = df['non_pun']
   non_puns = non_puns.assign(target=0)
-  non_puns['is_pun'] = df['is_pun']
-  return pd.concat([puns, non_puns])
+  # non_puns['is_pun'] = df['is_pun']
+  concatenated = pd.concat([puns, non_puns])
+  sorted = concatenated.sort_values(by=['row', 'target'])
+  return sorted
 
 
 def indentify_puns(df):
@@ -71,10 +73,51 @@ def indentify_puns(df):
   return df
 
 
+def identify_is_pun_true(df):
+  return df[(df['target'] == 0) & (df['is_pun'] == 1)]
+
+
+def get_average_lengths(df):
+  df['avg_length'] = df['text_clean'].str.len()
+  return df.groupby('target')['avg_length'].mean()
+
+
+def predict(context_df, input_df):
+  llm = ChatOpenAI(model='gpt-4o', api_key=openai_key)
+
+  def create_context_string(row):
+    text = row['text_clean']
+    target = row['target']
+
+    prefix = 'Contains a pun: ' if target == 1 else 'Does not contain a pun: '
+    return prefix + text
+
+  context_df['string'] = context_df.apply(create_context_string, axis=1)
+  context = '\n'.join(context_df['string'].tolist())
+
+  def apply_predict(row):
+    text = row['text_clean']
+    target = row['target']
+
+    prompt = f"{context}\n Input: {text}\n If the input contains a pun return 1, else return 0. Only return a single number (1 or 0)."
+    response = llm.invoke(prompt)
+    print(row.name, target, response.content)
+    return pd.Series({'pun': response.content})
+
+  input_df['prediction'] = input_df.apply(apply_predict, axis=1)
+  return input_df
+
+
 if __name__ == "__main__":
   # text_fr_df = load(cleaned_fr_path) #.head(5)
   # create_non_puns(text_fr_df)
-  contrastive_df = combine_files()
-  contrastive_df = format_dataset(contrastive_df)
-  save(contrastive_df, contrastive_path)
-  print(contrastive_df)
+  # contrastive_df = combine_files()
+  # contrastive_df = format_dataset(contrastive_df)
+  # save(contrastive_df, contrastive_path)
+  # print(contrastive_df)
+  # print(get_average_lengths(contrastive_df))
+  # print('count', identify_is_pun_true(contrastive_df))
+
+  contrastive_df = load(contrastive_path)
+  shuffled_df = contrastive_df.sample(frac=1).reset_index(drop=True)
+  print(predict(shuffled_df.iloc[0:474], shuffled_df.iloc[475:499]))
