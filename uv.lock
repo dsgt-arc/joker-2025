@@ -235,6 +235,15 @@ wheels = [
 ]
 
 [[package]]
+name = "faiss-gpu"
+version = "1.7.2"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/71/623896382d90a9a99adf3438aa2c575535ba37804be9701d66f3337afd83/faiss_gpu-1.7.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c98abc1aac06cb4cb94de223b3186bd4a60d15fd3cae42271604168abc081ca5", size = 85486427 },
+    { url = "https://files.pythonhosted.org/packages/b2/10/9041b22c4799440d3573af67053496b72d1b507c3f27900197ae00bf8d8a/faiss_gpu-1.7.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3ca9bfa2fda868f438a2f05c1d5aed53021bfaa55b25fd3ae666d2da201f3caf", size = 85486639 },
+]
+
+[[package]]
 name = "filelock"
 version = "3.18.0"
 source = { registry = "https://pypi.org/simple" }
@@ -407,6 +416,7 @@ name = "joker"
 version = "0.1.1"
 source = { editable = "." }
 dependencies = [
+    { name = "faiss-gpu" },
     { name = "ipykernel" },
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "numpy", version = "2.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -418,6 +428,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "faiss-gpu", specifier = ">=1.7.2" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "numpy", specifier = ">=2.0.2" },
     { name = "pandas" },
