@@ -1,24 +1,31 @@
 [project]
-name = "my-task-project"
+name = "joker"
 version = "0.1.1"
-authors = [{ name = "Anthony Miyaguchi", email = "acmiyaguchi@gatech.edu" }]
-description = "DS@GT CLEF project template"
+authors = [{ name = "Ben Herbert", email = "bherbert6@gatech.edu" }]
+description = "JOKER DS@GT 2025 Helper Package"
 readme = "README.md"
-requires-python = ">=3.8"
-dynamic = ["dependencies"]
+requires-python = ">=3.9"
+dependencies = [
+    "faiss-gpu>=1.7.2",
+    "ipykernel>=6.29.5",
+    "numpy>=2.0.2",
+    "pandas",
+    "panphon>=0.21.2",
+    "torch>=2.6.0",
+    "tqdm>=4.67.1",
+]
+
 
 [project.urls]
-Homepage = "https://github.com/dsgt-kaggle-clef/clef-project-template"
-Issues = "https://github.com/dsgt-kaggle-clef/clef-project-template/issues"
+Homepage = "https://github.com/dsgt-kaggle-clef/joker-2025"
+Issues = "https://github.com/dsgt-kaggle-clef/joker-2025/issues"
 
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.dynamic]
-dependencies = { file = "requirements.txt" }
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["my_task_package*"]
+include = ["joker*"]
 namespaces = false
