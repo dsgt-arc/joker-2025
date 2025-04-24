@@ -1,4 +1,4 @@
-id_en	text_en	text_clean	manual_location	manual_type	manual_alternative	pun_location	pun_type	alternative_word_en	phrase_en
+id_en	text_en	text_clean	manual_location	manual_type	manual_alternative	generated_location	generated_type	generated_alternative	phrase_en
 en_1007	"Save the whales, spouted Tom."	"Save the whales, he spouted."	spouted	homographic	spouted	spouted	homographic	spoke	spouted off
 en_1015	If a town's people have low IQs is the population dense?	If a town's people have low IQs is the population dense?	dense	homographic	dense	dense	homographic	stupid	population dense
 en_102	A skier retired because he was going downhill.	A skier retired because he was going downhill.	downhill	homographic	downhill	downhill	homographic	deteriorating	going downhill
@@ -332,7 +332,7 @@ en_2767	"OLD FARMERS never die, they just turn into vegetables."	"Old farmers ne
 en_2774	My name is Hans. I'm a manicurist	My name is Hans. I'm a manicurist	hans	homophonic	hands	Hans	homophonic	hands	My name is Hans
 en_2779	Pavlov was drooling at the thought.	Pavlov was drooling at the thought.	drooling	homographic	drooling	drooling	homographic	salivating	drooling at the thought
 en_2780	The boy who got electrocuted was unable to give a statement because he was still shocked at the incident.	The boy who got electrocuted was unable to give a statement because he was still shocked at the incident.	shocked	homographic	shocked	shocked	homographic	surprised	still shocked at the incident
-en_280	"I deny everything, said Tom knowingly."	"I deny everything, he said knowingly."	knowingly	homophonic	knowingly	no	homophonic	no-ing	deny everything
+en_280	"I deny everything, said Tom knowingly."	"I deny everything, he said knowingly."	knowingly	homophonic	no	knowingly	homophonic	no-ing	deny everything
 en_2805	The cat took up computer lessons in hopes of mastering its grip on a mouse.	The cat took up computer lessons in hopes of mastering its grip on a mouse.	mouse	homographic	mouse	mouse	homographic	device	grip on a mouse
 en_2814	The study of ancient symbols will lead you to rune.	The study of ancient symbols will lead you to rune.	rune	homophonic	ruin	rune	homophonic	ruin	lead you to ruin
 en_2820	"''If I let go of the ceiling it will collapse,'' Tom upheld."	"If I let go of the ceiling it will collapse, he upheld."	upheld	homographic	upheld	upheld	homographic	supported	uphold the ceiling
@@ -480,7 +480,7 @@ en_359	"When asked by a Health Department official to describe the mess he saw o
 en_3594	The body builder worried too much about the lifting contest and his trainer concluded that the mind is a terrible thing to weights.	The body builder worried too much about the lifting contest and his trainer concluded that the mind is a terrible thing to weights.	weights	homophonic	waste	weights	homophonic	waste	mind is a terrible thing to waste
 en_3598	"Chimney sweep's daughter, but she soots me fine."	"Chimney sweep's daughter, but she soots me fine."	soots	homophonic	suits	soots	homophonic	suits	suits me fine
 en_36	A husband who thinks he is as solid as a rock may have a wife who wishes he was a little bolder.	A husband who thinks he is as solid as a rock may have a wife who wishes he was a little bolder.	bolder	homophonic	boulder	bolder	homophonic	boulder	solid as a rock
-en_3613	"''I bought myself fifty hamburgers and I've only ten left,'' said Tom with fortitude."	"I bought myself fifty hamburgers and I've only ten left, he said with fortitude."	fortitude	homophonic	fourtytude	fortitude	homophonic	forty-two	I've only ten left
+en_3613	"''I bought myself fifty hamburgers and I've only ten left,'' said Tom with fortitude."	"I bought myself fifty hamburgers and I've only ten left, he said with fortitude."	fortitude	homophonic	forty-tude	fortitude	homophonic	forty-two	I've only ten left
 en_362	"I'm a lion hunter, said Tom, pridefully"	"I'm a lion hunter, he said, pridefully"	pridefully	homophonic	pride	pridefully	homophonic	pride	lion pride
 en_3621	I just got back from a statistical probability conference. It was average.	I just got back from a statistical probability conference. It was average.	average	homographic	average	average	homographic	typical	it was average
 en_3626	"Old colanders never die, they just can't take the strain anymore."	"Old colanders never die, they just can't take the strain anymore."	strain	homographic	strain	strain	homographic	difficulty	take the strain
