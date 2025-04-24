@@ -164,7 +164,7 @@ cython_debug/
 *.out
 
 # Config
-config.ini
+#config.ini
 
 # Mac
 .DS_Store
