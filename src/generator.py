@@ -3,7 +3,7 @@ from config import openai_key, combined_en_path, identification_gpt_4o_path
 from utils import get_response
 
 
-def identify_pun_meanings(df):
+def identify_pun_meanings(df, model):
   def apply(row):
     text_clean = row['text_clean']
     schema = '{ "pun_word": "pun_word", "pun_type": "pun_type", "alternative_word": "alternative_word", "idiomatic_phrase": "idiomatic_phrase" }'
@@ -18,13 +18,19 @@ def identify_pun_meanings(df):
       Return the output of the steps as a json using this schema: {schema}
     """
     print(row.name, text_clean)
-    return get_response(prompt, 'gpt-4o')
+    return get_response(prompt, model)
 
-  df[['pun_word_en', 'pun_type', 'alternative_word_en', 'phrase_en']] = df.apply(apply, axis=1)
+  df[['generated_location', 'generated_type', 'generated_alternative', 'phrase']] = df.apply(apply, axis=1)
   return df
 
 
-def translate_pun_meanings(df):
+def find_synonyms(df, model):
+  # TODO: get lists of synonyms for each of the two meanings of the pun word
+  return True
+
+
+def translate_pun_meanings(df, model):
+  # TODO: translate all of the synonyms, not just the two meanings
   def apply(row):
     pun_word = row['pun_word_en']
     alternative_word = row['alternative_word_en']
@@ -39,13 +45,18 @@ def translate_pun_meanings(df):
       Return the output of the steps as a json using this schema: {schema}
     """
     print(row.name, pun_word, alternative_word, idiomatic_phrase)
-    return get_response(prompt, 'gpt-4o')
+    return get_response(prompt, model)
 
   df[['pun_word_fr', 'alternative_word_fr', 'phrase_fr']] = df.apply(apply, axis=1)
   return df
 
 
+def find_phonetically_similar_matches(df, model):
+  # TODO: Use phonetic embeddings to find phonetically similar matches\
+  return True
+
 def generate_french_puns(df):
+  # TODO: generate French puns using the information generated in previous steps
   return True
   # def prompt_llm(row):
   #   text_clean = row['text_clean']
@@ -96,10 +107,15 @@ def generate_french_puns(df):
 
 
 if __name__ == "__main__":
-  # df = load(combined_en_path)
-  # save(identify_pun_meanings(df), identification_gpt_4o_path)
-  evaluate_pun_location(load(identification_gpt_4o_path))
-  # text_en_df = translate_pun_meanings(text_en_df)
-  # text_en_df = generate_french_puns(text_en_df)
+  model = 'gpt-4o'
+
+  df = load(combined_en_path)
+  df = identify_pun_meanings(df, model)
+  save(df, identification_gpt_4o_path)
+
+  # find_synonyms()
+  # translate_pun_meanings()
+  # find_phonetically_similar_matches()
+  # generate_french_puns()
 
 
