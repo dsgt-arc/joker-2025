@@ -1,7 +1,7 @@
 import configparser
 
 config = configparser.ConfigParser()
-config.read('../config/config.ini')
+config.read('../config.ini')
 
 openai_key = config['api-key']['openai']
 anthropic_key = config['api-key']['anthropic']
