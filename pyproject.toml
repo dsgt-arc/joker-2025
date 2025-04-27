@@ -1,7 +1,7 @@
 [project]
 name = "joker"
 version = "0.1.1"
-authors = [{ name = "Ben Herbert", email = "bherbert6@gatech.edu" }]
+authors = [{name = "Russell Taylor", email = "rdtaylorjr@gatech.edu"}, { name = "Ben Herbert", email = "bherbert6@gatech.edu" }]
 description = "JOKER DS@GT 2025 Helper Package"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -19,6 +19,8 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/dsgt-kaggle-clef/joker-2025"
 Issues = "https://github.com/dsgt-kaggle-clef/joker-2025/issues"
+Joker = "https://www.joker-project.com/"
+CLEF = "https://clef2025.clef-initiative.eu/index.php?page=Pages/Labs/JOKER.html"
 
 [build-system]
 requires = ["setuptools>=61.0"]

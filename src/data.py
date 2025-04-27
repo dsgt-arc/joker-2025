@@ -1,8 +1,9 @@
+import csv
 import glob
 import os
 import pandas as pd
 import re
-from config import cleaned_en_path, cleaned_fr_path, combined_fr_path, location_fr_input_path, location_fr_qrels_path, translation_en_path, translation_fr_path
+from config import cleaned_en_path, cleaned_fr_path, combined_en_path, combined_fr_path, location_manual_path, location_fr_input_path, location_fr_qrels_path, translation_en_path, translation_fr_path
 
 
 def load(path):
@@ -11,6 +12,8 @@ def load(path):
     data = pd.read_json(path)
   elif ext == '.csv':
     data = pd.read_csv(path)
+  elif ext == '.tsv':
+    data = pd.read_csv(path, sep='\t')
   else:
     with open(path, 'r') as file:
       data = file.read()
@@ -23,7 +26,6 @@ def load(path):
 
 def load_all(path):
   files = glob.glob(os.path.join(path, "*.csv"))
-  print('##########', files)
   df_list = []
 
   for file in files:
@@ -42,8 +44,8 @@ def save(data, path):
     os.makedirs(dir)
 
   ext = os.path.splitext(path)[1]
-  if ext == '.csv':
-    data.to_csv(path, index=False)
+  if ext == '.tsv':
+    data.to_csv(path, sep='\t', index=False, quoting=csv.QUOTE_NONE, escapechar='\\')
   else:
     with open(path, 'w') as file:
       data.write(file)
@@ -52,7 +54,7 @@ def save(data, path):
 
 
 def clean(text):
-  text = text.str.replace("''", '"').str.replace(' - ', '-').str.replace('",', ',"')
+  text = text.str.replace('\'\'', '"').str.replace(' - ', '-').str.replace('",', ',"')
   text = text.str.replace('3. ', '3.').str.replace(".'.", ".'").str.replace(': )', '.')
 
   def lower_old_puns(sentence):
@@ -89,41 +91,41 @@ def clean(text):
   return text
 
 
-def remove_quotes(text):
-  print('text', text)
-  print('clean', text.replace('"', ''))
-  return text.replace('"', '')
-
-
-def combine(translation, location_input, location_qrels):
-  combined_df = pd.merge(translation, location_input, left_on='text_fr', right_on='text', how='left')
-  combined_df = pd.merge(combined_df, location_qrels, left_on='id', right_on='id', how='left')
-  combined_df = combined_df[['id_en', 'text_fr', 'id', 'location']]
-  return combined_df.groupby('id_en').agg(lambda x: list(x.dropna())).reset_index()
-
-
 def clean_en():
   translation_en_df = load(translation_en_path)
   translation_en_df['text_clean'] = clean(translation_en_df['text_en'])
   save(translation_en_df, cleaned_en_path)
 
 
+def combine_en():
+  translation_df = load(cleaned_en_path)
+  location_manual_df = load(location_manual_path)
+  location_df = pd.merge(translation_df, location_manual_df, left_on='id_en', right_on='id_en', how='left')
+
+  save(location_df, combined_en_path)
+
+
 def clean_fr():
   translation_fr_df = load(translation_fr_path)
-  translation_fr_df['text_clean'] = translation_fr_df['text_fr'].apply(remove_quotes)
+  translation_fr_df['text_clean'] = translation_fr_df['text_fr']
   save(translation_fr_df, cleaned_fr_path)
 
 
 def combine_fr():
-  translation_fr_df = load(translation_fr_path)
-  location_fr_input_df = load(location_fr_input_path)
-  location_fr_qrels_df = load(location_fr_qrels_path)
+  translation_df = load(translation_fr_path)
+  location_input_df = load(location_fr_input_path)
+  location_qrels_df = load(location_fr_qrels_path)
 
-  translation_fr_df = combine(translation_fr_df, location_fr_input_df, location_fr_qrels_df)
-  save(translation_fr_df, combined_fr_path)
+  combined_df = pd.merge(translation_df, location_input_df, left_on='text_fr', right_on='text', how='left')
+  combined_df = pd.merge(combined_df, location_qrels_df, left_on='id', right_on='id', how='left')
+  combined_df = combined_df[['id_en', 'text_fr', 'id', 'location']]
+  combined_df = combined_df.groupby('id_en').agg(lambda x: list(x.dropna())).reset_index()
+
+  save(combined_df, combined_fr_path)
 
 
 if __name__ == "__main__":
   clean_en()
+  combine_en()
   clean_fr()
   combine_fr()
