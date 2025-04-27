@@ -1,7 +1,7 @@
 from data import load, save
 from config import openai_key, combined_en_path, identification_gpt_4o_path
 from utils import get_response
-
+from embeddings import read_faiss_index, retrieve_similar_words, load_embedding_matrix
 
 def identify_pun_meanings(df, model):
   def apply(row):
@@ -39,7 +39,7 @@ def translate_pun_meanings(df, model):
 
     prompt = f"""
       Step 1: Translate the word "{pun_word}" into French. Output one word.
-      Step 2: Translate the word "{alternative_meaning}" into French. Output one word.
+      Step 2: Translate the word "{alternative_word}" into French. Output one word.
       Step 3: Translate this idiomatic phrase into French: {idiomatic_phrase}. Do not translate literally. Output a short French idiomatic phrase.
       
       Return the output of the steps as a json using this schema: {schema}
@@ -51,9 +51,17 @@ def translate_pun_meanings(df, model):
   return df
 
 
-def find_phonetically_similar_matches(df, model):
-  # TODO: Use phonetic embeddings to find phonetically similar matches\
-  return True
+def find_phonetically_similar_matches(df):
+  # TODO: Use phonetic embeddings to find phonetically similar matches
+    index = read_faiss_index()
+    embedding_matrix = load_embedding_matrix()
+
+    def apply(row):
+      alternative_word_fr = row['alternative_word_fr']
+      return retrieve_similar_words(index, embedding_matrix, query_word=alternative_word_fr, top_k=5)
+    
+    df['similar_words'] = df.apply(apply, axis=1)
+    return df
 
 def generate_french_puns(df):
   # TODO: generate French puns using the information generated in previous steps
