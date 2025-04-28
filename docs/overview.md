@@ -46,6 +46,12 @@
 	output: text_en, pun_synonyms_fr, alternative_synonyms_fr
 
 4. search among those results to find phonetically similar candidates
+	1. Load FAISS index of embeddings
+	2. Load original embedding matrix
+	3. look up phonetic matches for alternative_word_fr. If word isn't in index, throw error
+	4. save the top-k matches into a new "similar_words" column
+
+	output: similar_words
 
 5. repeat the above to generate a set of candidate translations
 
