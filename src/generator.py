@@ -1,35 +1,42 @@
+import sys
+
 from data import load, save
-from config import openai_key, combined_en_path, identification_gpt_4o_path
+from config import combined_en_path, identify_path
 from utils import get_response
 from embeddings import read_faiss_index, retrieve_similar_words, load_embedding_matrix
+import pandas as pd
+pd.options.mode.chained_assignment = None
+
 
 def identify_pun_meanings(df, model):
   def apply(row):
     text_clean = row['text_clean']
-    schema = '{ "pun_word": "pun_word", "pun_type": "pun_type", "alternative_word": "alternative_word", "idiomatic_phrase": "idiomatic_phrase" }'
+    schema = '{ "pun_word": "pun_word", "pun_type": "pun_type", "first_meaning": [list of synonyms], "second_meaning": [list of synonyms], "first_context": [list of context words], "second_context": [list of context words] }'
     prompt = f"""
       Text: {text_clean}
     
       Step 1: Identify the pun word in this text. Output one word.
-      Step 2: Is this is a homographic or homophonic pun. Output either the word "homophonic" or the word "homographic".
-      Step 3: If the pun is homographic, identify the alternative meaning of the pun word that makes the text funny. Or, if the pun is homophonic, identify the alternative word that the pun word alludes to. Output one word.
-      Step 4: Pun words often occur within idiomatic phrases that support the alternative meaning. Identify the idiomatic phrase that makes the pun funny. Output a short phrase.
+      Step 2: Does the pun play on root words that are spelled the same (homographic) or does the pun play on root words that are spelled differently but sound the same (homophonic). Output either the word "homographic" or the word "homophonic".
+      Step 3: Make a list of synonyms for each of the two meanings of the pun. Output two lists: one list of synonyms for the first meaning of the pun and another list of synonyms for the second meaning of the pun. If it is a homophonic pun include the homophones in the appropriate lists.
+      Step 4: For each of the two meanings, identify any context words in the text that clearly support the respective meaning. Do not include context words unless they clearly support the meaning.
       
       Return the output of the steps as a json using this schema: {schema}
     """
+
+    ##Step 4: Pun words often occur within idiomatic phrases that support the alternative meaning. Identify the idiomatic phrase that makes the pun funny. Output a short phrase.
+
     print(row.name, text_clean)
     return get_response(prompt, model)
 
-  df[['generated_location', 'generated_type', 'generated_alternative', 'phrase']] = df.apply(apply, axis=1)
-  return df
+  chunk_size = 100
+  start = 0
+  chunks = [df.iloc[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
+  for i in range(start, len(chunks)):
+    chunks[i][['pun_word', 'pun_type', 'first_meaning', 'second_meaning', 'first_context', 'second_context']] = chunks[i].apply(apply, axis=1)
+    save(chunks[i], f'{identify_path}{model}/{i}.tsv')
 
 
-def find_synonyms(df, model):
-  # TODO: get lists of synonyms for each of the two meanings of the pun word
-  return True
-
-
-def translate_pun_meanings(df, model):
+def translate_pun_meanings(df):
   # TODO: translate all of the synonyms, not just the two meanings
   def apply(row):
     pun_word = row['pun_word_en']
@@ -52,7 +59,6 @@ def translate_pun_meanings(df, model):
 
 
 def find_phonetically_similar_matches(df):
-  # TODO: Use phonetic embeddings to find phonetically similar matches
     index = read_faiss_index()
     embedding_matrix = load_embedding_matrix()
 
@@ -62,6 +68,7 @@ def find_phonetically_similar_matches(df):
     
     df['similar_words'] = df.apply(apply, axis=1)
     return df
+
 
 def generate_french_puns(df):
   # TODO: generate French puns using the information generated in previous steps
@@ -115,11 +122,9 @@ def generate_french_puns(df):
 
 
 if __name__ == "__main__":
-  model = 'gpt-4o'
-
-  df = load(combined_en_path)
-  df = identify_pun_meanings(df, model)
-  save(df, identification_gpt_4o_path)
+  model = sys.argv[1]
+  df = load(combined_en_path).head(5)
+  identify_pun_meanings(df, model)
 
   # find_synonyms()
   # translate_pun_meanings()

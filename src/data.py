@@ -46,6 +46,8 @@ def save(data, path):
   ext = os.path.splitext(path)[1]
   if ext == '.tsv':
     data.to_csv(path, sep='\t', index=False, quoting=csv.QUOTE_NONE, escapechar='\\')
+  elif ext == '.csv':
+    data.to_csv(path, index=False)
   else:
     with open(path, 'w') as file:
       data.write(file)

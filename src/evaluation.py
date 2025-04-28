@@ -71,6 +71,7 @@ def evaluate_alternative_words(df, prompt_llm):
   print('recall:', recall)
   print('f1-score:', f1, '\n')
 
+
 if __name__ == "__main__":
   df = load(identification_gpt_4o_path)
   print('model: gpt-4o\n')
