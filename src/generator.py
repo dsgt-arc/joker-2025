@@ -1,15 +1,15 @@
 import sys
 
-from data import load, save
+from data import load, load_all, save
 from config import combined_en_path, identify_path
 from utils import get_response
-from embeddings import read_faiss_index, retrieve_similar_words, load_embedding_matrix
+# from embeddings import read_faiss_index, retrieve_similar_words, load_embedding_matrix
 
 import pandas as pd
 pd.options.mode.chained_assignment = None
 
 
-def identify_pun_meanings(df, model):
+def identify_pun_meanings(df, model, start=0, end=-1):
   def apply(row):
     text_clean = row['text_clean']
     schema = '{ "pun_word": "pun_word", "pun_type": "pun_type", "first_meaning": [list of synonyms], "second_meaning": [list of synonyms], "first_context": [list of context words], "second_context": [list of context words] }'
@@ -21,18 +21,25 @@ def identify_pun_meanings(df, model):
       Step 3: Make a list of synonyms for each of the two meanings of the pun. Output two lists: one list of synonyms for the first meaning of the pun and another list of synonyms for the second meaning of the pun. If it is a homophonic pun include the homophones in the appropriate lists.
       Step 4: For each of the two meanings, identify any context words in the text that clearly support the respective meaning. Do not include context words unless they clearly support the meaning.
       
-      Return the output of the steps as a json using this schema: {schema}
+      Return the output of the steps as a properly formatted json using this schema: {schema}
     """
 
     ##Step 4: Pun words often occur within idiomatic phrases that support the alternative meaning. Identify the idiomatic phrase that makes the pun funny. Output a short phrase.
 
     print(row.name, text_clean)
-    return get_response(prompt, model)
+    try:
+      response = get_response(prompt, model)
+    except ValueError:
+      print(f'Error: {e}')
+      response = '{ "pun_word": "ERROR", "pun_type": "", "first_meaning": [], "second_meaning": [], "first_context": [], "second_context": [] }'
+      pass
+    return response
 
   chunk_size = 100
-  start = 0
   chunks = [df.iloc[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
-  for i in range(start, len(chunks)):
+  if end == -1:
+    end = len(chunks)
+  for i in range(start, end):
     chunks[i][['pun_word', 'pun_type', 'first_meaning', 'second_meaning', 'first_context', 'second_context']] = chunks[i].apply(apply, axis=1)
     save(chunks[i], f'{identify_path}{model}/{i}.tsv')
 
@@ -59,16 +66,16 @@ def translate_pun_meanings(df):
   return df
 
 
-def find_phonetically_similar_matches(df):
-    index = read_faiss_index()
-    embedding_matrix = load_embedding_matrix()
-
-    def apply(row):
-      alternative_word_fr = row['alternative_word_fr']
-      return retrieve_similar_words(index, embedding_matrix, query_word=alternative_word_fr, top_k=5)
-    
-    df['similar_words'] = df.apply(apply, axis=1)
-    return df
+# def find_phonetically_similar_matches(df):
+#     index = read_faiss_index()
+#     embedding_matrix = load_embedding_matrix()
+#
+#     def apply(row):
+#       alternative_word_fr = row['alternative_word_fr']
+#       return retrieve_similar_words(index, embedding_matrix, query_word=alternative_word_fr, top_k=5)
+#
+#     df['similar_words'] = df.apply(apply, axis=1)
+#     return df
 
 
 def generate_french_puns(df):
@@ -124,8 +131,16 @@ def generate_french_puns(df):
 
 if __name__ == "__main__":
   model = sys.argv[1]
-  df = load(combined_en_path).head(5)
-  identify_pun_meanings(df, model)
+
+  ### identify pun meanings
+  # start = int(sys.argv[2])
+  # end = int(sys.argv[3])
+  # df = load(combined_en_path)#.head(5)
+  # identify_pun_meanings(df, model, start, end)
+
+  ### combine all identify batch files
+  # model_df = load_all(f'{identify_path}{model}/')
+  # save(model_df, f'{identify_path}{model}.tsv')
 
   # find_synonyms()
   # translate_pun_meanings()

@@ -1,9 +1,8 @@
-from config import claude, deepseek, gemini, gpt, mistral, o3
-from config import openai_key, gemini_key, anthropic_key, deepseek_key, mistral_key
+from config import claude, gemini, gemini_pro, gpt, mistral, o3, o4
+from config import openai_key, gemini_key, anthropic_key, mistral_key
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_deepseek import ChatDeepSeek
-from langchain_mistralai import ChatMistralAI
+# from langchain_mistralai import ChatMistralAI
 from langchain_openai import ChatOpenAI
 
 import pandas as pd
@@ -20,30 +19,29 @@ def get_response(prompt, model):
 
 
 def get_model(model):
-  if model == 'claude':
-    return claude
-  if model == 'deepseek':
-    return deepseek
-  if model == 'gemini':
-    return gemini
-  if model == 'gpt':
-    return gpt
-  if model == 'mistral':
-    return mistral
+  if model == 'o4':
+    return o4
   if model == 'o3':
     return o3
+  if model == 'gpt':
+    return gpt
+  if model == 'gemini_pro':
+    return gemini_pro
+  if model == 'gemini':
+    return gemini
+  if model == 'claude':
+    return claude
+  if model == 'mistral':
+    return mistral
 
 
 def get_llm(model):
+  if model == o4 or model == o3 or model == gpt:
+    return ChatOpenAI(model=model, api_key=openai_key)
+  if model == gemini_pro or model == gemini:
+    return ChatGoogleGenerativeAI(model=model, api_key=gemini_key)
   if model == claude:
     return ChatAnthropic(model=model, api_key=anthropic_key)
-  if model == deepseek:
-    return ChatDeepSeek(model=model, api_key=deepseek_key)
-  if model == gemini:
-    return ChatGoogleGenerativeAI(model=model, api_key=gemini_key)
-  if model == gpt:
-    return ChatOpenAI(model=model, api_key=openai_key)
   if model == mistral:
     return ChatMistralAI(model=model, api_key=mistral_key)
-  if model == o3:
-    return ChatOpenAI(model=model, api_key=openai_key)
+

@@ -1,14 +1,16 @@
+import sys
+
 import numpy as np
 import pandas as pd
-from config import identification_gpt_4o_path
-from data import load, save
+from config import identify_path
+from data import combine_en, load, load_all, save
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from utils import get_response
 
 
 def evaluate_pun_location(df):
   y_true = df['manual_location'].str.lower()
-  y_pred = df['generated_location'].str.lower()
+  y_pred = df['pun_word'].str.lower()
 
   accuracy = accuracy_score(y_true, y_pred)
   precision = precision_score(y_true, y_pred, average='weighted', zero_division=np.nan)
@@ -23,7 +25,7 @@ def evaluate_pun_location(df):
 
 def evaluate_pun_type(df):
   y_true = df['manual_type'].str.lower()
-  y_pred = df['generated_type'].str.lower()
+  y_pred = df['pun_type'].str.lower()
 
   accuracy = accuracy_score(y_true, y_pred)
   precision = precision_score(y_true, y_pred, average='weighted', zero_division=np.nan)
@@ -39,7 +41,7 @@ def evaluate_pun_type(df):
 def evaluate_alternative_words(df, prompt_llm):
   def apply(row):
     manual_alternative = row['manual_alternative'].lower()
-    generated_alternative = row['generated_alternative'].lower()
+    generated_alternative = row['pun_alternative'].lower()
 
     print(row.name, manual_alternative, generated_alternative)
     if manual_alternative == generated_alternative:
@@ -73,8 +75,14 @@ def evaluate_alternative_words(df, prompt_llm):
 
 
 if __name__ == "__main__":
-  df = load(identification_gpt_4o_path)
-  print('model: gpt-4o\n')
+  model = sys.argv[1]
+
+  model_df = load_all(f'{identify_path}{model}/')
+  save(model_df, f'{identify_path}{model}.tsv')
+  combine_en(f'{identify_path}{model}.tsv', f'{identify_path}{model}_fixed.tsv')
+  df = load(f'{identify_path}{model}_fixed.tsv')
+  df = df[df['manual_location'].str.len() > 0]
+  print('row count', len(df))
   evaluate_pun_location(df)
   evaluate_pun_type(df)
-  evaluate_alternative_words(df, prompt_llm=True)
+  # evaluate_alternative_words(df, prompt_llm=True)
