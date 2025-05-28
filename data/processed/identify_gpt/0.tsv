@@ -1,2 +1,0 @@
-id_en	text_en	text_clean	manual_location	manual_type	manual_alternative	pun_word	pun_type	first_meaning	second_meaning	first_context	second_context
-en_1007	Save the whales, spouted Tom.	Save the whales, he spouted.	spouted	homographic	spouted	spouted	homophonic	['said', 'declared', 'uttered', 'proclaimed', 'announced', 'stated']	['sprayed', 'ejected', 'jetted', 'squirted', 'shot out', 'gushed', 'spewed']	[]	['whales']
