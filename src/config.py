@@ -13,10 +13,13 @@ mistral_key = os.environ.get("MISTRAL_API_KEY")
 claude = config['model']['claude']
 deepseek = config['model']['deepseek']
 gemini = config['model']['gemini']
+gemini_pro = config['model']['gemini_pro']
 gpt = config['model']['gpt']
 mistral = config['model']['mistral']
 o3 = config['model']['o3']
+o4 = config['model']['o4']
 
+translation_path = config['path']['translation']
 translation_en_path = config['path']['translation_en']
 translation_fr_path = config['path']['translation_fr']
 
