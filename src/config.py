@@ -1,11 +1,21 @@
 import configparser
+import os
 
 config = configparser.ConfigParser()
 config.read('../config.ini')
 
-openai_key = config['api-key']['openai']
-anthropic_key = config['api-key']['anthropic']
-deepseek_key = config['api-key']['deepseek']
+openai_key = os.environ.get("OPENAI_API_KEY")
+gemini_key = os.environ.get("GEMINI_API_KEY")
+anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
+mistral_key = os.environ.get("MISTRAL_API_KEY")
+
+claude = config['model']['claude']
+deepseek = config['model']['deepseek']
+gemini = config['model']['gemini']
+gpt = config['model']['gpt']
+mistral = config['model']['mistral']
+o3 = config['model']['o3']
 
 translation_en_path = config['path']['translation_en']
 translation_fr_path = config['path']['translation_fr']
@@ -22,6 +32,6 @@ combined_en_path = config['path']['combined_en']
 combined_fr_path = config['path']['combined_fr']
 
 contrastive_path = config['path']['contrastive']
-contrastive_dir = config['path']['contrastive_dir']
+identify_path = config['path']['identify']
 
-identification_gpt_4o_path = config['path']['identification_gpt_4o']
+contrastive_dir = config['dir']['contrastive']
