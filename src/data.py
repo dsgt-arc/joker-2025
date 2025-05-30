@@ -26,6 +26,8 @@ def load(path):
 
 def load_all(path):
   files = glob.glob(os.path.join(path, "*.tsv"))
+  files = sorted(files, key=lambda x: int(re.search(r'\d+', x).group()))
+  print('files', files)
   df_list = []
 
   for file in files:

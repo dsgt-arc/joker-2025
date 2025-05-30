@@ -34,7 +34,13 @@ cleaned_fr_path = config['path']['cleaned_fr']
 combined_en_path = config['path']['combined_en']
 combined_fr_path = config['path']['combined_fr']
 
-contrastive_path = config['path']['contrastive']
-identify_path = config['path']['identify']
+fasttext_en_path = config['path']['fasttext_en']
+fasttext_fr_path = config['path']['fasttext_fr']
 
+contrastive_path = config['path']['contrastive']
+
+identify_dir = config['dir']['identify']
+translate_dir = config['dir']['translate']
 contrastive_dir = config['dir']['contrastive']
+
+

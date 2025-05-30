@@ -1,7 +1,8 @@
+import ast
 import sys
 
 from data import load, load_all, save
-from config import combined_en_path, identify_path
+from config import cleaned_en_path, identify_dir, translate_dir
 from utils import get_response
 # from embeddings import read_faiss_index, retrieve_similar_words, load_embedding_matrix
 
@@ -24,12 +25,10 @@ def identify_pun_meanings(df, model, start=0, end=-1):
       Return the output of the steps as a properly formatted json using this schema: {schema}
     """
 
-    ##Step 4: Pun words often occur within idiomatic phrases that support the alternative meaning. Identify the idiomatic phrase that makes the pun funny. Output a short phrase.
-
     print(row.name, text_clean)
     try:
       response = get_response(prompt, model)
-    except ValueError:
+    except ValueError as e:
       print(f'Error: {e}')
       response = '{ "pun_word": "ERROR", "pun_type": "", "first_meaning": [], "second_meaning": [], "first_context": [], "second_context": [] }'
       pass
@@ -41,29 +40,38 @@ def identify_pun_meanings(df, model, start=0, end=-1):
     end = len(chunks)
   for i in range(start, end):
     chunks[i][['pun_word', 'pun_type', 'first_meaning', 'second_meaning', 'first_context', 'second_context']] = chunks[i].apply(apply, axis=1)
-    save(chunks[i], f'{identify_path}{model}/{i}.tsv')
+    save(chunks[i], f'{identify_dir}{model}/{i}.tsv')
 
 
-def translate_pun_meanings(df):
-  # TODO: translate all of the synonyms, not just the two meanings
+def translate_pun_meanings(df, model, start=0, end=-1):
   def apply(row):
-    pun_word = row['pun_word_en']
-    alternative_word = row['alternative_word_en']
-    idiomatic_phrase = row['phrase_en']
-    schema = '{"pun_word": "step_1_word", "alternative_word": "step_2_word", "idiomatic_phrase": "step_3_phrase"}'
+    r = row.to_dict()
+    pun_word = r['pun_word']
+    first_meaning = r['first_meaning'].replace("'", '"')
+    second_meaning = r['second_meaning'].replace("'", '"')
+    first_context = r['first_context'].replace("'", '"')
+    second_context = r['second_context'].replace("'", '"')
 
     prompt = f"""
-      Step 1: Translate the word "{pun_word}" into French. Output one word.
-      Step 2: Translate the word "{alternative_word}" into French. Output one word.
-      Step 3: Translate this idiomatic phrase into French: {idiomatic_phrase}. Do not translate literally. Output a short French idiomatic phrase.
-      
-      Return the output of the steps as a json using this schema: {schema}
+      For each item in the values in this json, translate the item into French. Do not change the keys. The output must be a correctly formatted json.
+      {{ "pun_word_fr": "{pun_word}", "first_meaning_fr": {first_meaning}, "second_meaning_fr": {second_meaning}, "first_context_fr": {first_context}, "second_context_fr": {second_context} }}
     """
-    print(row.name, pun_word, alternative_word, idiomatic_phrase)
-    return get_response(prompt, model)
+    print(row.name, pun_word, first_meaning, second_meaning)
+    try:
+      response = get_response(prompt, model)
+    except ValueError as e:
+      print(f'Error: {e}')
+      response = '{ "pun_word": "ERROR", "pun_type": "", "first_meaning": [], "second_meaning": [], "first_context": [], "second_context": [] }'
+      pass
+    return response
 
-  df[['pun_word_fr', 'alternative_word_fr', 'phrase_fr']] = df.apply(apply, axis=1)
-  return df
+  chunk_size = 100
+  chunks = [df.iloc[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
+  if end == -1:
+    end = len(chunks)
+  for i in range(start, end):
+    chunks[i][['pun_word_fr', 'first_meaning_fr', 'second_meaning_fr', 'first_context_fr', 'second_context_fr']] = chunks[i].apply(apply, axis=1)
+    save(chunks[i], f'{translate_dir}{model}/{i}.tsv')
 
 
 # def find_phonetically_similar_matches(df):
@@ -130,17 +138,23 @@ def generate_french_puns(df):
 
 
 if __name__ == "__main__":
-  model = sys.argv[1]
+  task = sys.argv[1]
+  model = sys.argv[2]
+  start = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+  end = int(sys.argv[4]) if len(sys.argv) > 4 else -1
 
-  ### identify pun meanings
-  # start = int(sys.argv[2])
-  # end = int(sys.argv[3])
-  # df = load(combined_en_path)#.head(5)
-  # identify_pun_meanings(df, model, start, end)
+  if task == 'identify':
+    df = load(cleaned_en_path)
+    identify_pun_meanings(df, model, start, end)
 
-  ### combine all identify batch files
-  # model_df = load_all(f'{identify_path}{model}/')
-  # save(model_df, f'{identify_path}{model}.tsv')
+  if task == 'translate':
+    df = load(f'{identify_dir}{model}.tsv')
+    translate_pun_meanings(df, model, start, end)
+
+
+    # for i in range(len(df)):
+    #   json_str = df[['pun_word', 'first_meaning', 'second_meaning', 'first_context', 'second_context']].iloc[i]
+    #   print(json_str)
 
   # find_synonyms()
   # translate_pun_meanings()

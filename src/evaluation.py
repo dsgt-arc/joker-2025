@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 import pandas as pd
-from config import identify_path
+from config import identify_dir
 from data import combine_en, load, load_all, save
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from utils import get_response
@@ -77,10 +77,10 @@ def evaluate_alternative_words(df, prompt_llm):
 if __name__ == "__main__":
   model = sys.argv[1]
 
-  model_df = load_all(f'{identify_path}{model}/')
-  save(model_df, f'{identify_path}{model}.tsv')
-  combine_en(f'{identify_path}{model}.tsv', f'{identify_path}{model}_fixed.tsv')
-  df = load(f'{identify_path}{model}_fixed.tsv')
+  model_df = load_all(f'{identify_dir}{model}/')
+  save(model_df, f'{identify_dir}{model}.tsv')
+  # combine_en(f'{identify_dir}{model}.tsv', f'{identify_dir}{model}_fixed.tsv')
+  df = load(f'{identify_dir}{model}.tsv')
   df = df[df['manual_location'].str.len() > 0]
   print('row count', len(df))
   evaluate_pun_location(df)
