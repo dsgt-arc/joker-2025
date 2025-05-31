@@ -1,11 +1,15 @@
+import ast
 import sys
 
 import numpy as np
 import pandas as pd
-from config import identify_path
+from config import identify_dir, translate_dir
 from data import combine_en, load, load_all, save
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from utils import get_response
+
+from sentence_transformers import SentenceTransformer, util
+import torch
 
 
 def evaluate_pun_location(df):
@@ -74,15 +78,63 @@ def evaluate_alternative_words(df, prompt_llm):
   print('f1-score:', f1, '\n')
 
 
-if __name__ == "__main__":
-  model = sys.argv[1]
+def evaluate_translations(df):
+  model_name = 'all-MiniLM-L6-v2'
+  model = SentenceTransformer(model_name)
+  combined = []
+  total_problems = []
+  def apply(row):
+    source = [row['pun_word']] + row['first_meaning'] + row['second_meaning']
+    back_translated = [row['pun_word_bt']] + row['first_meaning_bt'] + row['second_meaning_bt']
 
-  model_df = load_all(f'{identify_path}{model}/')
-  save(model_df, f'{identify_path}{model}.tsv')
-  combine_en(f'{identify_path}{model}.tsv', f'{identify_path}{model}_fixed.tsv')
-  df = load(f'{identify_path}{model}_fixed.tsv')
-  df = df[df['manual_location'].str.len() > 0]
-  print('row count', len(df))
-  evaluate_pun_location(df)
-  evaluate_pun_type(df)
-  # evaluate_alternative_words(df, prompt_llm=True)
+    problems = 0
+    source_embeddings = model.encode(source, convert_to_tensor=True)
+    back_translated_embeddings = model.encode(back_translated, convert_to_tensor=True)
+    similarities = []
+    for i in range(len(source_embeddings)):
+      if i < len(source) and i < len(back_translated) and source[i] == back_translated[i]:
+        similarities.append(1)
+      elif i < len(source_embeddings) and i < len(back_translated_embeddings):
+        similarities.append(util.cos_sim(source_embeddings[i], back_translated_embeddings[i]).item())
+      else:
+        problems += 1
+    similarity = sum(similarities) / len(similarities)
+
+    # print(row['pun_word'], row['pun_word_bt'], similarity)
+    combined.append(similarity)
+    total_problems.append(problems)
+
+
+  df['first_meaning'] = df['first_meaning'].apply(ast.literal_eval)
+  df['second_meaning'] = df['second_meaning'].apply(ast.literal_eval)
+  df['first_meaning_bt'] = df['first_meaning_bt'].apply(ast.literal_eval)
+  df['second_meaning_bt'] = df['second_meaning_bt'].apply(ast.literal_eval)
+  df[['pun_word', 'first_meaning', 'second_meaning', 'pun_word_bt', 'first_meaning_bt', 'second_meaning_bt']].apply(apply, axis=1)
+  print('mean cosine similarity', np.mean(combined))
+  print('variance', np.var(combined))
+  print('top quartile', len([x for x in combined if x > 0.75]), len([x for x in combined if x > 0.75]) / len(df))
+  print('bottom quartile', len([x for x in combined if x < 0.25]), len([x for x in combined if x < 0.25]) / len(df))
+  print('problems', sum(total_problems), sum(total_problems) / len(df))
+
+
+if __name__ == "__main__":
+  task = sys.argv[1]
+  model = sys.argv[2]
+
+  if task == 'identify':
+    df = load_all(f'{identify_dir}{model}/')
+    save(df, f'{identify_dir}{model}.tsv')
+    df = load(f'{identify_dir}{model}.tsv')
+    df = df[df['manual_location'].str.len() > 0]
+    print('row count', len(df))
+    evaluate_pun_location(df)
+    evaluate_pun_type(df)
+    # evaluate_alternative_words(df, prompt_llm=True
+    
+  if task == 'translate':
+    df = load_all(f'{translate_dir}{model}/')
+    save(df, f'{translate_dir}{model}.tsv')
+    df = load(f'{translate_dir}{model}.tsv')
+    df = df[df['pun_word_bt'].str.len() > 0]
+    print('row count', len(df))
+    evaluate_translations(df)
