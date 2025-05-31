@@ -4,7 +4,8 @@ import os
 import pandas as pd
 import re
 from config import cleaned_en_path, cleaned_fr_path, combined_en_path, combined_fr_path, location_manual_path, location_fr_input_path, location_fr_qrels_path, translation_path
-
+import warnings
+warnings.filterwarnings('ignore')
 
 def load(path):
   ext = os.path.splitext(path)[1]
@@ -27,7 +28,7 @@ def load(path):
 def load_all(path):
   files = glob.glob(os.path.join(path, "*.tsv"))
   files = sorted(files, key=lambda x: int(re.search(r'\d+', x).group()))
-  print('files', files)
+  # print('files', files)
   df_list = []
 
   for file in files:

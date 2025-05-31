@@ -5,6 +5,8 @@ from data import load, load_all, save
 from config import cleaned_en_path, identify_dir, translate_dir
 from utils import get_response
 # from embeddings import read_faiss_index, retrieve_similar_words, load_embedding_matrix
+from langchain_core.documents import Document
+from langchain_google_community import GoogleTranslateTransformer
 
 import pandas as pd
 pd.options.mode.chained_assignment = None
@@ -43,17 +45,17 @@ def identify_pun_meanings(df, model, start=0, end=-1):
     save(chunks[i], f'{identify_dir}{model}/{i}.tsv')
 
 
-def translate_pun_meanings(df, model, start=0, end=-1):
-  def apply(row):
-    r = row.to_dict()
-    pun_word = r['pun_word']
-    first_meaning = r['first_meaning'].replace("'", '"')
-    second_meaning = r['second_meaning'].replace("'", '"')
-    first_context = r['first_context'].replace("'", '"')
-    second_context = r['second_context'].replace("'", '"')
+def translate_pun_meanings(df, model, start=0, end=-1, translate_flag=True):
+  def translate(row):
+    row_dict = row.to_dict()
+    pun_word = row_dict['pun_word']
+    first_meaning = row_dict['first_meaning'].replace("'", '"')
+    second_meaning = row_dict['second_meaning'].replace("'", '"')
+    first_context = row_dict['first_context'].replace("'", '"')
+    second_context = row_dict['second_context'].replace("'", '"')
 
     prompt = f"""
-      For each item in the values in this json, translate the item into French. Do not change the keys. The output must be a correctly formatted json.
+      Translate the values in this json from English into French. If a value is a list, translate each element in the list. Do not change the keys. The output must be a correctly formatted json.
       {{ "pun_word_fr": "{pun_word}", "first_meaning_fr": {first_meaning}, "second_meaning_fr": {second_meaning}, "first_context_fr": {first_context}, "second_context_fr": {second_context} }}
     """
     print(row.name, pun_word, first_meaning, second_meaning)
@@ -65,13 +67,99 @@ def translate_pun_meanings(df, model, start=0, end=-1):
       pass
     return response
 
+  def back_translate(row):
+    r = row.to_dict()
+    pun_word = r['pun_word_fr']
+    first_meaning = r['first_meaning_fr']#.replace("'", '"')
+    second_meaning = r['second_meaning_fr']#.replace("'", '"')
+    first_context = r['first_context_fr']#.replace("'", '"')
+    second_context = r['second_context_fr']#.replace("'", '"')
+
+    prompt = f"""
+      Translate the values in this json from French into English. If a value is a list, translate each element in the list. Do not change the keys. The output must be a correctly formatted json.
+      {{ "pun_word_bt": "{pun_word}", "first_meaning_bt": {first_meaning}, "second_meaning_bt": {second_meaning}, "first_context_bt": {first_context}, "second_context_bt": {second_context} }}
+    """
+    print(row.name, pun_word, first_meaning, second_meaning)
+    try:
+      response = get_response(prompt, model)
+    except ValueError as e:
+      print(f'Error: {e}')
+      response = '{ "pun_word_bt": "ERROR", "first_meaning_bt": [], "second_meaning_bt": [], "first_context_bt": [], "second_context_bt": [] }'
+      pass
+    return response
+
   chunk_size = 100
   chunks = [df.iloc[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
-  if end == -1:
-    end = len(chunks)
+  end = end if end > 0 else len(chunks)
   for i in range(start, end):
-    chunks[i][['pun_word_fr', 'first_meaning_fr', 'second_meaning_fr', 'first_context_fr', 'second_context_fr']] = chunks[i].apply(apply, axis=1)
-    save(chunks[i], f'{translate_dir}{model}/{i}.tsv')
+    if model == 'google':
+      if translate_flag:
+        chunks[i][['pun_word_fr', 'first_meaning_fr', 'second_meaning_fr', 'first_context_fr', 'second_context_fr']] = chunks[i].apply(google_translate, axis=1, args=('en', 'fr', '', '_fr'))
+        save(chunks[i], f'{translate_dir}{model}/t/{i}.tsv')
+      translate_df = load(f'{translate_dir}{model}/t/{i}.tsv')
+      translate_df[['pun_word_bt', 'first_meaning_bt', 'second_meaning_bt', 'first_context_bt', 'second_context_bt']] = translate_df.apply(google_translate, axis=1, args=('fr', 'en', '_fr', '_bt'))
+      save(translate_df, f'{translate_dir}{model}/{i}.tsv')
+    else:
+      if translate_flag:
+        chunks[i][['pun_word_fr', 'first_meaning_fr', 'second_meaning_fr', 'first_context_fr', 'second_context_fr']] = chunks[i].apply(translate, axis=1)
+        save(chunks[i], f'{translate_dir}{model}/t/{i}.tsv')
+      # translate_df = load(f'{translate_dir}{model}/t/{i}.tsv')
+      # translate_df[['pun_word_bt', 'first_meaning_bt', 'second_meaning_bt', 'first_context_bt', 'second_context_bt']] = translate_df.apply(back_translate, axis=1)
+      # save(translate_df, f'{translate_dir}{model}/{i}.tsv')
+
+
+def google_translate(row, source_language_code, target_language_code, source_suffix, output_suffix):
+  model = GoogleTranslateTransformer(project_id='gen-lang-client-0948849680')
+
+  row_dict = row.to_dict()
+  pun_word = row_dict[f'pun_word{source_suffix}']
+  response = model.transform_documents(source_language_code=source_language_code, target_language_code=target_language_code, documents=[Document(page_content=pun_word)])
+  response_pun_word = response[0].page_content
+
+  first_meaning = ast.literal_eval(row_dict[f'first_meaning{source_suffix}'])
+  response_first_meaning = []
+  if len(first_meaning) > 0:
+    documents = []
+    for m in first_meaning:
+      documents.append(Document(page_content=m))
+    response = model.transform_documents(source_language_code=source_language_code, target_language_code=target_language_code, documents=documents)
+    for r in response:
+      response_first_meaning.append(r.page_content)
+
+  second_meaning = ast.literal_eval(row_dict[f'second_meaning{source_suffix}'])
+  response_second_meaning = []
+  if len(second_meaning) > 0:
+    documents = []
+    for m in second_meaning:
+      documents.append(Document(page_content=m))
+    response = model.transform_documents(source_language_code=source_language_code, target_language_code=target_language_code, documents=documents)
+    for r in response:
+      response_second_meaning.append(r.page_content)
+
+  first_context = ast.literal_eval(row_dict[f'first_context{source_suffix}'])
+  response_first_context = []
+  if len(first_context) > 0:
+    documents = []
+    for m in first_context:
+      documents.append(Document(page_content=m))
+    response = model.transform_documents(source_language_code=source_language_code, target_language_code=target_language_code, documents=documents)
+    for r in response:
+      response_first_context.append(r.page_content)
+
+  second_context = ast.literal_eval(row_dict[f'second_context{source_suffix}'])
+  response_second_context = []
+  if len(second_context) > 0:
+    documents = []
+    for m in second_context:
+      documents.append(Document(page_content=m))
+    response = model.transform_documents(source_language_code=source_language_code, target_language_code=target_language_code, documents=documents)
+    for r in response:
+      response_second_context.append(r.page_content)
+
+  response_json = {f"pun_word{output_suffix}": response_pun_word, f"first_meaning{output_suffix}": response_first_meaning, f"second_meaning{output_suffix}": response_second_meaning, f"first_context{output_suffix}": response_first_context, f"second_context{output_suffix}": response_second_context }
+  print(row.name, pun_word, first_meaning, second_meaning)
+  print(response_json)
+  return pd.Series(response_json)
 
 
 # def find_phonetically_similar_matches(df):
@@ -142,14 +230,19 @@ if __name__ == "__main__":
   model = sys.argv[2]
   start = int(sys.argv[3]) if len(sys.argv) > 3 else 0
   end = int(sys.argv[4]) if len(sys.argv) > 4 else -1
+  translate_flag = False if len(sys.argv) > 5 else True
 
   if task == 'identify':
     df = load(cleaned_en_path)
     identify_pun_meanings(df, model, start, end)
 
   if task == 'translate':
-    df = load(f'{identify_dir}{model}.tsv')
-    translate_pun_meanings(df, model, start, end)
+    df = load(f'{identify_dir}gemini_pro.tsv')
+    translate_pun_meanings(df, model, start, end, translate_flag)
+
+  # if task == 'translate':
+  #   df = load(f'{translate_dir}{model}/t/{start}.tsv')
+  #   translate_pun_meanings(df, model, start, end)
 
 
     # for i in range(len(df)):

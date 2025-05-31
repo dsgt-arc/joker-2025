@@ -1,9 +1,10 @@
-from config import claude, gemini, gemini_pro, gpt, mistral, o3, o4
+from config import camembert, claude, gemini, gemini_pro, gpt, mistral, o3, o4, google
 from config import openai_key, gemini_key, anthropic_key, mistral_key
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
-# from langchain_mistralai import ChatMistralAI
+from langchain_mistralai import ChatMistralAI
 from langchain_openai import ChatOpenAI
+from sentence_transformers import SentenceTransformer
 
 import pandas as pd
 import json
@@ -33,6 +34,8 @@ def get_model(model):
     return claude
   if model == 'mistral':
     return mistral
+  if model == 'camembert':
+    return camembert
 
 
 def get_llm(model):
@@ -44,4 +47,5 @@ def get_llm(model):
     return ChatAnthropic(model=model, api_key=anthropic_key)
   if model == mistral:
     return ChatMistralAI(model=model, api_key=mistral_key)
-
+  if model == camembert:
+    return SentenceTransformer(camembert)

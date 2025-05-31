@@ -18,6 +18,8 @@ gpt = config['model']['gpt']
 mistral = config['model']['mistral']
 o3 = config['model']['o3']
 o4 = config['model']['o4']
+google = config['model']['google']
+camembert = config['model']['camembert']
 
 translation_path = config['path']['translation']
 translation_en_path = config['path']['translation_en']
@@ -35,7 +37,8 @@ combined_en_path = config['path']['combined_en']
 combined_fr_path = config['path']['combined_fr']
 
 fasttext_en_path = config['path']['fasttext_en']
-fasttext_fr_path = config['path']['fasttext_fr']
+fasttext_align_en_path = config['path']['fasttext_align_en']
+fasttext_align_fr_path = config['path']['fasttext_align_fr']
 
 contrastive_path = config['path']['contrastive']
 
