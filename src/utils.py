@@ -1,4 +1,4 @@
-from config import camembert, claude, gemini, gemini_pro, gpt, mistral, o3, o4, google
+from config import bilingual, camembert, claude, gemini, gemini_pro, gpt, mistral, o3, o4
 from config import openai_key, gemini_key, anthropic_key, mistral_key
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -10,8 +10,8 @@ import pandas as pd
 import json
 
 
-def get_response(prompt, model):
-  llm = get_llm(get_model(model))
+def get_response(prompt, model_str):
+  llm = get_model(model_str)
   response = llm.invoke(prompt).content
 
   print(response[response.find('{'):response.rfind('}') + 1].replace('\n', ''))
@@ -19,7 +19,23 @@ def get_response(prompt, model):
   return pd.Series(response_json)
 
 
-def get_model(model):
+def get_model(model_str):
+  model = get_api_model_str(model_str)
+  if model == o4 or model == o3 or model == gpt:
+    return ChatOpenAI(model=model, api_key=openai_key)
+  if model == gemini_pro or model == gemini:
+    return ChatGoogleGenerativeAI(model=model, api_key=gemini_key)
+  if model == claude:
+    return ChatAnthropic(model=model, api_key=anthropic_key)
+  if model == mistral:
+    return ChatMistralAI(model=model, api_key=mistral_key)
+  if model == camembert:
+    return SentenceTransformer(camembert)
+  if model == bilingual:
+    return SentenceTransformer(bilingual, trust_remote_code=True)
+
+
+def get_api_model_str(model):
   if model == 'o4':
     return o4
   if model == 'o3':
@@ -36,16 +52,5 @@ def get_model(model):
     return mistral
   if model == 'camembert':
     return camembert
-
-
-def get_llm(model):
-  if model == o4 or model == o3 or model == gpt:
-    return ChatOpenAI(model=model, api_key=openai_key)
-  if model == gemini_pro or model == gemini:
-    return ChatGoogleGenerativeAI(model=model, api_key=gemini_key)
-  if model == claude:
-    return ChatAnthropic(model=model, api_key=anthropic_key)
-  if model == mistral:
-    return ChatMistralAI(model=model, api_key=mistral_key)
-  if model == camembert:
-    return SentenceTransformer(camembert)
+  if model == 'bilingual':
+    return bilingual
