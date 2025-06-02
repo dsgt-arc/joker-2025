@@ -3,8 +3,9 @@ import glob
 import os
 import pandas as pd
 import re
-from config import cleaned_en_path, cleaned_fr_path, combined_en_path, combined_fr_path, location_manual_path, location_fr_input_path, location_fr_qrels_path, translation_en_path, translation_fr_path
-
+from config import cleaned_en_path, cleaned_fr_path, combined_en_path, combined_fr_path, location_manual_path, location_fr_input_path, location_fr_qrels_path, translation_path
+import warnings
+warnings.filterwarnings('ignore')
 
 def load(path):
   ext = os.path.splitext(path)[1]
@@ -25,15 +26,17 @@ def load(path):
 
 
 def load_all(path):
-  files = glob.glob(os.path.join(path, "*.csv"))
+  files = glob.glob(os.path.join(path, "*.tsv"))
+  files = sorted(files, key=lambda x: int(re.search(r'\d+', x).group()))
+  # print('files', files)
   df_list = []
 
   for file in files:
-    df = pd.read_csv(file)
+    df = pd.read_csv(file, sep='\t')
     df_list.append(df)
 
   combined_df = pd.concat(df_list, ignore_index=True)
-  print(f'Loaded all csvs in {path}')
+  print(f'Loaded all tsvs in {path}')
   print(f'Row count:', len(combined_df))
   return combined_df.fillna('')
 
@@ -46,6 +49,8 @@ def save(data, path):
   ext = os.path.splitext(path)[1]
   if ext == '.tsv':
     data.to_csv(path, sep='\t', index=False, quoting=csv.QUOTE_NONE, escapechar='\\')
+  elif ext == '.csv':
+    data.to_csv(path, index=False)
   else:
     with open(path, 'w') as file:
       data.write(file)
@@ -54,8 +59,13 @@ def save(data, path):
 
 
 def clean(text):
+  text = text.str.replace(r'\n', ' ').str.replace('\'\'said Tom blankly.', '"", said Tom blankly.')
   text = text.str.replace('\'\'', '"').str.replace(' - ', '-').str.replace('",', ',"')
-  text = text.str.replace('3. ', '3.').str.replace(".'.", ".'").str.replace(': )', '.')
+  text = text.str.replace('3. ', '3.').str.replace(".'.", ".'").str.replace(': )', '.').str.replace('……………..', '…')
+  text = text.str.removeprefix('- ')
+  remove = ['#dadjoke', '#funny', '#instagramposts', '#instagramreels', '#hipster', '#LOL', '#GenZ', '#JossOfAlva', '#Comedy', '#Pun', '#joke', '#pun', '#dadjokes', '#Humour', '#Jokes', '#wordplay', '#OneLiner', '#FunQuestion', r'https://t.co/Gvt90HO0LB', r'https://t.co/busgJ9Th4z']
+  for r in remove:
+    text = text.str.replace(r, '')
 
   def lower_old_puns(sentence):
     words = sentence.split()
@@ -92,27 +102,30 @@ def clean(text):
 
 
 def clean_en():
-  translation_en_df = load(translation_en_path)
-  translation_en_df['text_clean'] = clean(translation_en_df['text_en'])
+  translation_df = load(translation_path)
+  translation_en_df = translation_df[~translation_df['id_en'].duplicated(keep='first')][['id_en', 'en']]
+  translation_en_df['text_clean'] = clean(translation_en_df['en'])
+  translation_en_df = translation_en_df.drop('en', axis=1)
   save(translation_en_df, cleaned_en_path)
 
 
-def combine_en():
-  translation_df = load(cleaned_en_path)
+def combine_en(translation_path=cleaned_en_path, save_path=combined_en_path):
+  translation_df = load(translation_path)
+  translation_df.drop(columns=['manual_location', 'manual_type', 'manual_alternative'], inplace=True)
   location_manual_df = load(location_manual_path)
   location_df = pd.merge(translation_df, location_manual_df, left_on='id_en', right_on='id_en', how='left')
 
-  save(location_df, combined_en_path)
+  save(location_df, save_path)
 
 
 def clean_fr():
-  translation_fr_df = load(translation_fr_path)
+  translation_fr_df = load(translation_path)
   translation_fr_df['text_clean'] = translation_fr_df['text_fr']
   save(translation_fr_df, cleaned_fr_path)
 
 
 def combine_fr():
-  translation_df = load(translation_fr_path)
+  translation_df = load(translation_path)
   location_input_df = load(location_fr_input_path)
   location_qrels_df = load(location_fr_qrels_path)
 
@@ -127,5 +140,5 @@ def combine_fr():
 if __name__ == "__main__":
   clean_en()
   combine_en()
-  clean_fr()
-  combine_fr()
+  # clean_fr()
+  # combine_fr()
