@@ -1,7 +1,8 @@
 from sentence_transformers import SentenceTransformer, util
 import torch
+import sys
 from utils import get_response
-from config import generate_dir, translate_dir
+from config import contrastive_dir, generate_dir, translate_dir
 from data import load, load_all, save
 
 
@@ -10,24 +11,12 @@ def generate_french_puns(df, model, start=0, end=-1):
         text_clean = row['text_clean']
         schema = '{ "generated_pun": "Generated French pun sentence" }'
         prompt = f"""
-      English pun sentence: {text_clean}
-      
-      Pun word: {pun_word}
-      First meaning of the pun_word: {first_meaning}
-      Second meaning of the pun word: {second_meaning}
-      Context words that support the first meaning: {first_context}
-      Context words that support the second meaning: {second_meaning}
-      
-      Pun word translated into French: {pun_word_fr}
-      First meaning translated into French: {first_meaning_fr}
-      Second meaning translated into French: {second_meaning_fr}
-      First context words translated into French: {first_context_fr}
-      Second context words translated into French: {second_context_fr}
+        Here is an English pun: {text_clean}
+        
+        Generate a similar French pun. Use a homonym where its first meaning is related to the broader context and its second meaning is part of an idiomatic phrase. Both meanings should be obvious and funny to a native French speaker.
 
-      Using the above information, generate a French pun sentence similar to the English pun sentence. Do not translate the English pun sentence literally. Be sure to find and use a French homonym that a native French speaker would find funny.
-      
-      Return the output as a properly formatted json using this schema: {schema}
-    """
+        Return the output as a properly formatted json using this schema: {schema}
+        """
 
         print(row.name, text_clean)
         try:
@@ -58,3 +47,8 @@ if __name__ == "__main__":
     df = load_all(f'{translate_dir}o4/t/')
     save(df, f'{translate_dir}o4.tsv')
     generate_french_puns(df, model, start, end)
+
+  if task == 'contrastive':
+    df = load_all(f'{contrastive_dir}baseline/gemini/{model}/')
+    save(df, f'{contrastive_dir}baseline/gemini/{model}.tsv')
+    regenerate_failed_puns(df, model, start, end)

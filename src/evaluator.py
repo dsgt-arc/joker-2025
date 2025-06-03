@@ -3,7 +3,7 @@ import sys
 
 import numpy as np
 import pandas as pd
-from config import identify_dir, translate_dir
+from config import contrastive_dir, generate_dir, identify_dir, translate_dir
 from data import combine_en, load, load_all, save
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from utils import get_response
@@ -117,9 +117,51 @@ def evaluate_translations(df):
   print('problems', sum(total_problems), sum(total_problems) / len(df))
 
 
+def evaluate_generations(df, context_df, eval_model, start=0, end=-1):
+  def create_context_string(row):
+    text = row['text_clean']
+    target = row['target']
+    prefix = 'Contains a pun: ' if target == 1 else 'Does not contain a pun: '
+    return prefix + text
+
+  pun_df = context_df[context_df['target'] == 1].sample(n=25)
+  non_pun_df = context_df[context_df['target'] == 0].sample(n=25)
+  context_df = pd.concat([pun_df, non_pun_df], axis=0)
+  context_df['string'] = context_df.apply(create_context_string, axis=1)
+  context = '\n'.join(context_df['string'].tolist())
+
+  def apply(row):
+    text = row['generated_pun']
+    schema = '{ "is_pun": 0 or 1 }'
+    prompt = f"""
+      {context}
+      Input: {text}
+      If the input contains a pun return 1, else return 0, in a properly formatted json using this schema: {schema}
+    """
+    print(row.name, text)
+    try:
+      response = get_response(prompt, eval_model)
+    except ValueError as e:
+      print(f'Error: {e}')
+      response = '{ "is_pun": "ERROR" }'
+      pass
+    return response
+
+  chunk_size = 10
+  chunks = [df.iloc[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
+  if end == -1:
+    end = len(chunks)
+  for i in range(start, end):
+    chunks[i][['is_pun']] = chunks[i].apply(apply, axis=1)
+    save(chunks[i], f'{contrastive_dir}baseline/{eval_model}/{model}/{i}.tsv')
+
+
 if __name__ == "__main__":
   task = sys.argv[1]
   model = sys.argv[2]
+  eval_model = sys.argv[3] if len(sys.argv) > 3 else ''
+  start = int(sys.argv[4]) if len(sys.argv) > 4 else 0
+  end = int(sys.argv[5]) if len(sys.argv) > 5 else -1
 
   if task == 'identify':
     df = load_all(f'{identify_dir}{model}/')
@@ -138,3 +180,25 @@ if __name__ == "__main__":
     df = df[df['pun_word_bt'].str.len() > 0]
     print('row count', len(df))
     evaluate_translations(df)
+
+  if task == 'generate':
+    context_df = load(f'{contrastive_dir}dataset.csv')
+    print('context count', len(context_df))
+
+    df = load_all(f'{generate_dir}{model}/')
+    save(df, f'{generate_dir}{model}.tsv')
+    print('generate count', len(df))
+    evaluate_generations(df, context_df, eval_model, start, end)
+
+  if task == 'gen_count':
+    df = load_all(f'{contrastive_dir}baseline/o4/{model}/')
+    save(df, f'{contrastive_dir}baseline/o4/{model}.tsv')
+    print('eval_model=o4 - row count', len(df))
+    print(df['is_pun'].value_counts(normalize=True))
+
+    df = load_all(f'{contrastive_dir}baseline/gemini/{model}/')
+    save(df, f'{contrastive_dir}baseline/gemini/{model}.tsv')
+    print('\neval_model=gemini - row count', len(df))
+    print(df['is_pun'].value_counts(normalize=True))
+
+

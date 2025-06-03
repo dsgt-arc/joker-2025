@@ -9,6 +9,7 @@ gemini_key = os.environ.get("GEMINI_API_KEY")
 anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
 deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
 mistral_key = os.environ.get("MISTRAL_API_KEY")
+openrouter_key = os.environ.get("OPENROUTER_API_KEY")
 
 claude = config['model']['claude']
 deepseek = config['model']['deepseek']
@@ -48,6 +49,8 @@ identify_dir = config['dir']['identify']
 translate_dir = config['dir']['translate']
 similarity_dir = config['dir']['similarity']
 homonym_dir = config['dir']['homonym']
+generate_dir = config['dir']['generate']
+contrastive_baseline_dir = config['dir']['contrastive_baseline']
 contrastive_dir = config['dir']['contrastive']
 
 
