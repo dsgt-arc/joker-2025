@@ -9,6 +9,7 @@ gemini_key = os.environ.get("GEMINI_API_KEY")
 anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
 deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
 mistral_key = os.environ.get("MISTRAL_API_KEY")
+openrouter_key = os.environ.get("OPENROUTER_API_KEY")
 
 claude = config['model']['claude']
 deepseek = config['model']['deepseek']
@@ -20,6 +21,7 @@ o3 = config['model']['o3']
 o4 = config['model']['o4']
 google = config['model']['google']
 camembert = config['model']['camembert']
+bilingual = config['model']['bilingual']
 
 translation_path = config['path']['translation']
 translation_en_path = config['path']['translation_en']
@@ -37,6 +39,7 @@ combined_en_path = config['path']['combined_en']
 combined_fr_path = config['path']['combined_fr']
 
 fasttext_en_path = config['path']['fasttext_en']
+fasttext_fr_path = config['path']['fasttext_fr']
 fasttext_align_en_path = config['path']['fasttext_align_en']
 fasttext_align_fr_path = config['path']['fasttext_align_fr']
 
@@ -44,6 +47,10 @@ contrastive_path = config['path']['contrastive']
 
 identify_dir = config['dir']['identify']
 translate_dir = config['dir']['translate']
+similarity_dir = config['dir']['similarity']
+homonym_dir = config['dir']['homonym']
+generate_dir = config['dir']['generate']
+contrastive_baseline_dir = config['dir']['contrastive_baseline']
 contrastive_dir = config['dir']['contrastive']
 
 

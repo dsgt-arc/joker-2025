@@ -1,12 +1,15 @@
 import ast
 import sys
+import torch
 
 from data import load, load_all, save
-from config import cleaned_en_path, identify_dir, translate_dir
-from utils import get_response
+from config import cleaned_en_path, homonym_dir, identify_dir, translate_dir, similarity_dir
+from utils import get_model, get_response
 # from embeddings import read_faiss_index, retrieve_similar_words, load_embedding_matrix
+
 from langchain_core.documents import Document
 from langchain_google_community import GoogleTranslateTransformer
+from sentence_transformers import SentenceTransformer, util
 
 import pandas as pd
 pd.options.mode.chained_assignment = None
@@ -72,7 +75,7 @@ def translate_pun_meanings(df, model, start=0, end=-1, translate_flag=True):
     pun_word = r['pun_word_fr']
     first_meaning = r['first_meaning_fr']#.replace("'", '"')
     second_meaning = r['second_meaning_fr']#.replace("'", '"')
-    first_context = r['first_context_fr']#.replace("'", '"')
+    first_context = r['first_context_fr']#.replace("'", '"')The semc
     second_context = r['second_context_fr']#.replace("'", '"')
 
     prompt = f"""
@@ -103,9 +106,9 @@ def translate_pun_meanings(df, model, start=0, end=-1, translate_flag=True):
       if translate_flag:
         chunks[i][['pun_word_fr', 'first_meaning_fr', 'second_meaning_fr', 'first_context_fr', 'second_context_fr']] = chunks[i].apply(translate, axis=1)
         save(chunks[i], f'{translate_dir}{model}/t/{i}.tsv')
-      # translate_df = load(f'{translate_dir}{model}/t/{i}.tsv')
-      # translate_df[['pun_word_bt', 'first_meaning_bt', 'second_meaning_bt', 'first_context_bt', 'second_context_bt']] = translate_df.apply(back_translate, axis=1)
-      # save(translate_df, f'{translate_dir}{model}/{i}.tsv')
+      translate_df = load(f'{translate_dir}{model}/t/{i}.tsv')
+      translate_df[['pun_word_bt', 'first_meaning_bt', 'second_meaning_bt', 'first_context_bt', 'second_context_bt']] = translate_df.apply(back_translate, axis=1)
+      save(translate_df, f'{translate_dir}{model}/{i}.tsv')
 
 
 def google_translate(row, source_language_code, target_language_code, source_suffix, output_suffix):
@@ -160,6 +163,83 @@ def google_translate(row, source_language_code, target_language_code, source_suf
   print(row.name, pun_word, first_meaning, second_meaning)
   print(response_json)
   return pd.Series(response_json)
+
+
+def get_cosine_similarity(df, model, start=0, end=-1):
+  def apply(row, st_model):
+    pun_word_embedding_en = st_model.encode([row['pun_word']], convert_to_tensor=True)
+    first_meaning_embedding_en = torch.mean(
+      st_model.encode(ast.literal_eval(row['first_meaning']), convert_to_tensor=True), dim=0, keepdim=True)
+    second_meaning_embedding_en = torch.mean(
+      st_model.encode(ast.literal_eval(row['second_meaning']), convert_to_tensor=True), dim=0, keepdim=True)
+
+    pun_word_embedding_fr = st_model.encode([row['pun_word_fr']], convert_to_tensor=True)
+    first_meaning_embedding_fr = torch.mean(
+      st_model.encode(ast.literal_eval(row['first_meaning_fr']), convert_to_tensor=True), dim=0, keepdim=True)
+    second_meaning_embedding_fr = torch.mean(
+      st_model.encode(ast.literal_eval(row['second_meaning_fr']), convert_to_tensor=True), dim=0, keepdim=True)
+
+    first_similarity_en = util.cos_sim(pun_word_embedding_en, first_meaning_embedding_en).item()
+    second_similarity_en = util.cos_sim(pun_word_embedding_en, second_meaning_embedding_en).item()
+    first_similarity_fr = util.cos_sim(pun_word_embedding_fr, first_meaning_embedding_fr).item()
+    second_similarity_fr = util.cos_sim(pun_word_embedding_fr, second_meaning_embedding_fr).item()
+
+    first_similarity_diff = first_similarity_en - first_similarity_fr
+    second_similarity_diff = second_similarity_en - second_similarity_fr
+
+    print(row.name, row['pun_word'], row['pun_word_fr'], row['pun_type'])
+    print('first en', first_similarity_en, 'fr', first_similarity_fr, 'diff', first_similarity_diff)
+    print('second en', second_similarity_en, 'fr', second_similarity_fr, 'diff', second_similarity_diff)
+
+    result = {'first_similarity_en': first_similarity_en, 'second_similarity_en': second_similarity_en,
+              'first_similarity_fr': first_similarity_fr, 'second_similarity_fr': second_similarity_fr,
+              'first_similarity_diff': first_similarity_diff, 'second_similarity_diff': second_similarity_diff}
+    return pd.Series(result)
+
+  st_model = get_model(model)
+  chunk_size = 10
+  chunks = [df.iloc[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
+  if end == -1:
+    end = len(chunks)
+  for i in range(start, end):
+    current_df = chunks[i]
+    current_df[['first_similarity_en', 'second_similarity_en', 'first_similarity_fr', 'second_similarity_fr',
+               'first_similarity_diff', 'second_similarity_diff']] = current_df.apply(apply, axis=1, args=(st_model,))
+    save(current_df, f'{similarity_dir}{model}/{i}.tsv')
+
+
+def check_french_homonyms(df, model, start=0, end=-1):
+  def apply(row):
+    pun_word_fr = row['pun_word_fr']
+    first_meaning_fr = row['first_meaning_fr']
+    second_meaning_fr = row['second_meaning_fr']
+
+    schema = '{ "is_homonym": 1 or 0, "first_meaning_overlap": 1 or 0, "second_meaning_overlap": 1 or 0 }'
+
+    prompt = f"""
+      Question 1: Is the French word "{pun_word_fr}" a homonym? If yes, output 1, else output 0.
+      Question 2: Does the semantic range of the word "{pun_word_fr}" overlap with the semantic range of the words in this list: {first_meaning_fr}? If yes, output 1, else output 0.
+      Question 3: Does the semantic range of the word "{pun_word_fr}" overlap with the semantic range of the words in this list: {second_meaning_fr}? If yes, output 1, else output 0.
+
+      Return the output of the questions as a properly formatted json using this schema: {schema}
+    """
+
+    print(row.name, row['pun_word_fr'],  row['first_meaning_fr'], row['second_meaning_fr'])
+    try:
+      response = get_response(prompt, model)
+    except ValueError as e:
+      print(f'Error: {e}')
+      response = '{ "is_homonym": -1, "first_meaning_overlap": -1, "second_meaning_overlap": -1 }'
+      pass
+    return response
+
+  chunk_size = 10
+  chunks = [df.iloc[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
+  if end == -1:
+    end = len(chunks)
+  for i in range(start, end):
+    chunks[i][['is_homonym', 'first_meaning_overlap', 'second_meaning_overlap']] = chunks[i].apply(apply, axis=1)
+    save(chunks[i], f'{homonym_dir}{model}/{i}.tsv')
 
 
 # def find_phonetically_similar_matches(df):
@@ -237,8 +317,19 @@ if __name__ == "__main__":
     identify_pun_meanings(df, model, start, end)
 
   if task == 'translate':
-    df = load(f'{identify_dir}gemini_pro.tsv')
+    df = load_all(f'{identify_dir}gemini_pro/')
+    save(df, f'{identify_dir}gemini_pro.tsv')
     translate_pun_meanings(df, model, start, end, translate_flag)
+
+  if task == 'similarity':
+    df = load_all(f'{translate_dir}o4/t/')
+    save(df, f'{translate_dir}o4.tsv')
+    get_cosine_similarity(df, model, start, end)
+
+  if task == 'homonym':
+    df = load_all(f'{similarity_dir}bilingual/')
+    save(df, f'{similarity_dir}bilingual.tsv')
+    check_french_homonyms(df, model, start, end)
 
   # if task == 'translate':
   #   df = load(f'{translate_dir}{model}/t/{start}.tsv')
