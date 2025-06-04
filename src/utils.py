@@ -11,7 +11,6 @@ from pydantic import SecretStr
 import pandas as pd
 import json
 
-
 def get_response(prompt, model_str):
   # llm = ChatOpenRouter(model=get_api_model_str(model_str), api_key=openrouter_key)
   llm = get_model(model_str)
@@ -21,6 +20,10 @@ def get_response(prompt, model_str):
   response_json = json.loads(response[response.find('{'):response.rfind('}') + 1])
   return pd.Series(response_json)
 
+def get_response_not_json(prompt, model):
+   llm = get_llm(get_model(model))
+   response = llm.invoke(prompt).content
+   return response
 
 def get_model(model_str):
   model = get_api_model_str(model_str)

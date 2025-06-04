@@ -2,7 +2,7 @@ import configparser
 import os
 
 config = configparser.ConfigParser()
-config.read('../config.ini')
+config.read("../config.ini")
 
 openai_key = os.environ.get("OPENAI_API_KEY")
 gemini_key = os.environ.get("GEMINI_API_KEY")
@@ -27,17 +27,19 @@ translation_path = config['path']['translation']
 translation_en_path = config['path']['translation_en']
 translation_fr_path = config['path']['translation_fr']
 
-location_en_input_path = config['path']['location_en_input']
-location_fr_input_path = config['path']['location_fr_input']
-location_en_qrels_path = config['path']['location_en_qrels']
-location_fr_qrels_path = config['path']['location_fr_qrels']
-location_manual_path = config['path']['location_manual']
+location_en_input_path = config["path"]["location_en_input"]
+location_fr_input_path = config["path"]["location_fr_input"]
+location_en_qrels_path = config["path"]["location_en_qrels"]
+location_fr_qrels_path = config["path"]["location_fr_qrels"]
+location_manual_path = config["path"]["location_manual"]
 
-cleaned_en_path = config['path']['cleaned_en']
-cleaned_fr_path = config['path']['cleaned_fr']
-combined_en_path = config['path']['combined_en']
-combined_fr_path = config['path']['combined_fr']
+cleaned_en_path = config["path"]["cleaned_en"]
+cleaned_fr_path = config["path"]["cleaned_fr"]
+combined_en_path = config["path"]["combined_en"]
+combined_fr_path = config["path"]["combined_fr"]
 
+identification_gpt_4o_path = config["path"]["identification_gpt_4o"]
+refinement_gpt_4o_path = config["path"]["refinement_gpt_4o"]
 fasttext_en_path = config['path']['fasttext_en']
 fasttext_fr_path = config['path']['fasttext_fr']
 fasttext_align_en_path = config['path']['fasttext_align_en']
@@ -52,5 +54,6 @@ homonym_dir = config['dir']['homonym']
 generate_dir = config['dir']['generate']
 contrastive_baseline_dir = config['dir']['contrastive_baseline']
 contrastive_dir = config['dir']['contrastive']
+
 
 
