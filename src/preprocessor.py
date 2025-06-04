@@ -208,7 +208,8 @@ def get_cosine_similarity(df, model, start=0, end=-1):
     save(current_df, f'{similarity_dir}{model}/{i}.tsv')
 
 
-def check_french_homonyms(df, model, start=0, end=-1):
+def check_french_homonyms(df, model_str, start=0, end=-1):
+  model = get_model(model_str)
   def apply(row):
     pun_word_fr = row['pun_word_fr']
     first_meaning_fr = row['first_meaning_fr']
@@ -217,9 +218,10 @@ def check_french_homonyms(df, model, start=0, end=-1):
     schema = '{ "is_homonym": 1 or 0, "first_meaning_overlap": 1 or 0, "second_meaning_overlap": 1 or 0 }'
 
     prompt = f"""
-      Question 1: Is the French word "{pun_word_fr}" a homonym? If yes, output 1, else output 0.
-      Question 2: Does the semantic range of the word "{pun_word_fr}" overlap with the semantic range of the words in this list: {first_meaning_fr}? If yes, output 1, else output 0.
-      Question 3: Does the semantic range of the word "{pun_word_fr}" overlap with the semantic range of the words in this list: {second_meaning_fr}? If yes, output 1, else output 0.
+      Step 1: Is the French word "{pun_word_fr}" a homonym? If yes, output 1, else output 0.
+      Step 2: Does the semantic range of the word "{pun_word_fr}" overlap with the semantic range of the words in this list: {first_meaning_fr}? If yes, output 1, else output 0.
+      Step 3: Does the semantic range of the word "{pun_word_fr}" overlap with the semantic range of the words in this list: {second_meaning_fr}? If yes, output 1, else output 0.
+      Step 4: If the word in step 1 is a homonym and if its meaning overlaps with the meanings in steps 2 and 3, 
 
       Return the output of the questions as a properly formatted json using this schema: {schema}
     """
@@ -239,7 +241,7 @@ def check_french_homonyms(df, model, start=0, end=-1):
     end = len(chunks)
   for i in range(start, end):
     chunks[i][['is_homonym', 'first_meaning_overlap', 'second_meaning_overlap']] = chunks[i].apply(apply, axis=1)
-    save(chunks[i], f'{homonym_dir}{model}/{i}.tsv')
+    save(chunks[i], f'{homonym_dir}{model_str}/{i}.tsv')
 
 
 # def find_phonetically_similar_matches(df):

@@ -17,7 +17,7 @@ def read_faiss_index(index_path="data/faiss.index"):
   return index
 
 
-def load_embedding_matrix(embedding_matrix_path="data/embedding_matrix.npy"):
+def load_embedding_matrix(embedding_matrix_path="../data/embedding_matrix.npy"):
   embedding_matrix = np.load(embedding_matrix_path)
   return embedding_matrix
 
@@ -47,4 +47,6 @@ def retrieve_similar_words(index, embedding_matrix, query_word, top_k=5,
 
 
 if __name__ == "__main__":
-  create_faiss_index()
+  data = load_embedding_matrix()
+  print(data.shape)
+  print(data)

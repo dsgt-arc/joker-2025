@@ -52,6 +52,7 @@ translate_dir = config['dir']['translate']
 similarity_dir = config['dir']['similarity']
 homonym_dir = config['dir']['homonym']
 generate_dir = config['dir']['generate']
+regenerate_dir = config['dir']['regenerate']
 contrastive_baseline_dir = config['dir']['contrastive_baseline']
 contrastive_dir = config['dir']['contrastive']
 

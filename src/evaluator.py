@@ -3,10 +3,10 @@ import sys
 
 import numpy as np
 import pandas as pd
-from config import contrastive_dir, generate_dir, identify_dir, translate_dir
+from config import contrastive_dir, generate_dir, identify_dir, regenerate_dir, translate_dir
 from data import combine_en, load, load_all, save
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from utils import get_response
+from utils import get_model, get_response
 
 from sentence_transformers import SentenceTransformer, util
 import torch
@@ -117,7 +117,8 @@ def evaluate_translations(df):
   print('problems', sum(total_problems), sum(total_problems) / len(df))
 
 
-def evaluate_generations(df, context_df, eval_model, start=0, end=-1):
+def evaluate_generations(df, context_df, model_str, eval_model_str, start=0, end=-1):
+  eval_model = get_model(eval_model_str)
   def create_context_string(row):
     text = row['text_clean']
     target = row['target']
@@ -153,7 +154,7 @@ def evaluate_generations(df, context_df, eval_model, start=0, end=-1):
     end = len(chunks)
   for i in range(start, end):
     chunks[i][['is_pun']] = chunks[i].apply(apply, axis=1)
-    save(chunks[i], f'{contrastive_dir}baseline/{eval_model}/{model}/{i}.tsv')
+    save(chunks[i], f'{contrastive_dir}baseline/{eval_model_str}/{model_str}/{i}.tsv')
 
 
 if __name__ == "__main__":
@@ -188,17 +189,33 @@ if __name__ == "__main__":
     df = load_all(f'{generate_dir}{model}/')
     save(df, f'{generate_dir}{model}.tsv')
     print('generate count', len(df))
-    evaluate_generations(df, context_df, eval_model, start, end)
+    evaluate_generations(df, context_df, model, eval_model, start, end)
 
   if task == 'gen_count':
-    df = load_all(f'{contrastive_dir}baseline/o4/{model}/')
-    save(df, f'{contrastive_dir}baseline/o4/{model}.tsv')
+    # df = load_all(f'{contrastive_dir}baseline/o4/{model}/')
+    df = load(f'{contrastive_dir}baseline/o4/{model}.tsv')
     print('eval_model=o4 - row count', len(df))
     print(df['is_pun'].value_counts(normalize=True))
 
-    df = load_all(f'{contrastive_dir}baseline/gemini/{model}/')
-    save(df, f'{contrastive_dir}baseline/gemini/{model}.tsv')
+    # df = load_all(f'{contrastive_dir}baseline/gemini/{model}/')
+    df = load(f'{contrastive_dir}baseline/gemini/{model}.tsv')
     print('\neval_model=gemini - row count', len(df))
+    print(df['is_pun'].value_counts(normalize=True))
+
+    if model == 'o4':
+      contrastive_df = load(f'{contrastive_dir}baseline/gemini/{model}.tsv')
+      regenerate_df = load_all(f'{regenerate_dir}{model}/')[['id_en', 'generated_pun', 'is_pun']]
+      regenerate_df['is_pun'] = regenerate_df['is_pun'].astype(int)
+
+      df = contrastive_df.merge(regenerate_df, how='left', left_on='id_en', right_on='id_en', suffixes=('', '_new'))
+      df[['generated_pun', 'is_pun']] = np.where(pd.notnull(df[['generated_pun_new', 'is_pun_new']]), df[['generated_pun_new', 'is_pun_new']], df[['generated_pun', 'is_pun']])
+      df.drop(['generated_pun_new', 'is_pun_new'], axis=1, inplace=True)
+      save(df, f'{regenerate_dir}{model}.tsv')
+    else:
+      df = load_all(f'{regenerate_dir}{model}/')
+      save(df, f'{regenerate_dir}{model}.tsv')
+
+    print('\nregenerate - row count', len(df))
     print(df['is_pun'].value_counts(normalize=True))
 
 
