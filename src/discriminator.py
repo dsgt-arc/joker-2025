@@ -1,7 +1,9 @@
 from data import load, save
 from utils import get_response_not_json
 from config import identification_gpt_4o_path, refinement_gpt_4o_path
+import pandas as pd
 import re
+import os
 
 
 evaluators = {
@@ -70,6 +72,12 @@ Rating: <number from 0 - 4>
 Justification: <very concise explanation of key issues>"""
     },
 }
+max_scores = {
+    "equivalence": 2,
+    "mistranslation": 2,
+    "emotion": 1,
+    "authenticity": 4,
+}
 
 
 def parse_evaluator_response(text):
@@ -84,7 +92,7 @@ def parse_evaluator_response(text):
         if justification_match
         else "No justification"
     )
-
+    print(f"Rating: {rating}, Justification: {justification}")
     return {"rating": rating, "justification": justification}
 
 
@@ -111,15 +119,15 @@ def aggregate_evaluations(evaluator_responses):
     # Check if we received scores from all evaluators
     if len(scores) < len(thresholds):
         print("Missing scores from some evaluators. Re-evaluation.")
-        return "refine"
+        return "refine", evaluations
 
     # Determine if all scores meet thresholds
     if all(scores[key] >= thresholds[key] for key in thresholds):
         print("Translation is good enough. Accepting it.")
-        return "accept"
+        return "accept", evaluations
 
     print("Translation needs improvement.")
-    return "refine"
+    return "refine", evaluations
 
 
 # The input DataFrame should have the following columns:
@@ -133,15 +141,29 @@ def aggregate_evaluations(evaluator_responses):
 
 
 def refine_translations(df, model):
+    checkpoint_path = "refined_translations_progress.csv"
+    done_ids = set()
+    if os.path.exists(checkpoint_path):
+        done_df = pd.read_csv(checkpoint_path)
+        done_ids = set(done_df["id_en"])
+
     for idx, row in df.iterrows():
         english_pun = row["text_clean"]
-        current_translation = row["initial_translation"]
+        current_translation = row["generated_pun"]
         id_en = row["id_en"]
         is_pun = row["is_pun"]
         max_iterations = 5
         iteration = 0
+
+        if id_en in done_ids:
+            continue
+
         if is_pun == 1:
             iteration = 1
+            best_score = -1
+            best_translation = current_translation
+            best_iteration = 0
+
             while iteration < max_iterations + 1:
                 print(
                     f"\n--------------Iteration {iteration} for Row {idx}---------------"
@@ -154,16 +176,26 @@ def refine_translations(df, model):
                     response = get_response_not_json(input_text, model)
                     evaluator_responses[key] = response
 
-                decision = aggregate_evaluations(evaluator_responses)
+                # Get decision and parsed evaluations
+                decision, evaluations = aggregate_evaluations(evaluator_responses)
+
+                # Compute raw average score (no normalization)
+                scores = [
+                    eval["rating"]
+                    for eval in evaluations.values()
+                    if eval["rating"] is not None
+                ]
+                avg_score = sum(scores) / len(scores) if scores else 0
+
+                if avg_score > best_score:
+                    best_score = avg_score
+                    best_translation = current_translation
+                    best_iteration = iteration
 
                 if decision in ["accept", "minor_fix"]:
                     print(
                         f"Final translation after {iteration} iteration(s): {current_translation}"
                     )
-
-                    df.at[idx, "id_en"] = id_en
-                    df.at[idx, "final_translation"] = current_translation
-                    df.at[idx, "iteration"] = iteration
                     break
 
                 feedback_text = "\n\n".join(
@@ -190,19 +222,25 @@ def refine_translations(df, model):
                 current_translation = get_response_not_json(refinement_prompt, model)
                 iteration += 1
 
-            if iteration == max_iterations:
-                print(
-                    "Max refinements reached. Final translation:", current_translation
-                )
-                df.at[idx, "id_en"] = id_en
-                df.at[idx, "final_translation"] = current_translation
-                df.at[idx, "iteration"] = iteration
+            print(
+                f"Best translation chosen after refinement: {best_translation} (Score: {best_score})"
+            )
+            df.at[idx, "id_en"] = id_en
+            df.at[idx, "final_translation"] = best_translation
+            df.at[idx, "iteration"] = best_iteration
+            df.at[idx, "best_score"] = best_score
 
+            df.loc[[idx]].to_csv(
+                checkpoint_path,
+                mode="a",
+                header=not os.path.exists(checkpoint_path),
+                index=False,
+            )
     return df
 
 
 if __name__ == "__main__":
-    model = "gpt-4o"
+    model = "o4"
 
     df = load(identification_gpt_4o_path)
     df = refine_translations(df, model)
